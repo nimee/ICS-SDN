@@ -10,4 +10,6 @@ To run the controller:
   1. Copy the dynamic_controller.py into the /pox/ext directory
   2. Copy the 'controller.sh' file into the pox/ directory and run './controller.sh' from the /pox directory
   
-  
+# NIDS branch
+
+The main idea behind this branch is to extend the original project in order to extract the sensor data directly from the network via SDN port mirroring into a remote NIDS.
