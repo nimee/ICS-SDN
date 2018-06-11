@@ -18,6 +18,8 @@ from utils import IP
 
 from mininet.link import Intf
 
+from sdnmirroring import mirror, cleanup
+
 class SimpleCPS(MiniCPS):
 
     """Main container used to run the simulation."""
@@ -54,9 +56,11 @@ class SimpleCPS(MiniCPS):
 	plc3.cmd('route add -net 192.168.1.0 netmask 255.255.255.0 dev plc301-eth2')
 
         # start devices
+        mirror()
         CLI(self.net)
 
         self.net.stop()
+        cleanup()
 
 if __name__ == "__main__":
 
