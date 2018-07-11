@@ -170,18 +170,18 @@ class ICSSniffer(Thread):
         sniff(iface=self.__iface, count=0, store=0, prn=self.__handle_pkt, stop_filter=lambda p: self.__stop_is_set())
 
 class IDSPrompt(Cmd):
+    '''Crude command line interface for the IDS. Meant as a testbed.'''
 
     def __init__(self, iface: str):
         Cmd.__init__(self)
-        self.prompt = 'ICS SDN> '
-        self.__iface = iface
-        self.__backend = None
-        self.__end = False
-        self.__config = None
-        self.__rest_auth = HTTPBasicAuth(REST_USER, REST_PASS)
-        self.__rest_hdr = { 'Accept': 'application/json' }
-        self.__rest_uri = 'http://{0:s}:{1:d}/onos/v1'.format(CONTROLLER_IP, REST_PORT)
-        self.__locations = {}
+        self.prompt = 'ICS SDN> '                                                                   # Prompt
+        self.__iface = iface                                                                        # Network interface to be used by the sniffer
+        self.__backend = None                                                                       # Sniffer
+        self.__config = None                                                                        # Configuration dictionary (When loaded)
+        self.__rest_auth = HTTPBasicAuth(REST_USER, REST_PASS)                                      # ONOS REST API authentication
+        self.__rest_hdr = { 'Accept': 'application/json' }                                          # ONOS REST API headers
+        self.__rest_uri = 'http://{0:s}:{1:d}/onos/v1'.format(CONTROLLER_IP, REST_PORT)             # ONOS REST API URL
+        self.__locations = {}                                                                       # SDN host locations cache
     
     def do_load(self, line):
         '''Load configuration variables'''
@@ -198,24 +198,24 @@ class IDSPrompt(Cmd):
             msg = self.__backend.pop()
             if msg is not None:
                 if 'src' in msg.keys() and 'IP' in msg['src'].keys():
-                    if msg['src']['IP'] not in self.__locations.keys():
+                    if msg['src']['IP'] not in self.__locations.keys():             # Insert a new host within the locations cache
                         rsp = requests.get(self.__rest_uri + '/hosts/' + msg['src']['MAC'] + '/None', auth=self.__rest_auth, headers=self.__rest_hdr)
                         rsp = loads(rsp.text)
                         self.__locations[msg['src']['IP']] = rsp['locations'][0]
-                    msg['src']['location'] = self.__locations[msg['src']['IP']]
+                    msg['src']['location'] = self.__locations[msg['src']['IP']]     # Fetch the source's location from the cache
                     if self.__config is not None:
-                        for k in self.__config['IP'].keys():
+                        for k in self.__config['IP'].keys():                        # Fetch the source's name based upon the configuration, if any
                             if msg['src']['IP'] == self.__config['IP'][k]:
                                 msg['src']['name'] = k
                                 break
                 if 'dst' in msg.keys() and 'IP' in msg['dst'].keys():
-                    if msg['dst']['IP'] not in self.__locations.keys():
+                    if msg['dst']['IP'] not in self.__locations.keys():             # Insert a new host within the locations cache
                         rsp = requests.get(self.__rest_uri + '/hosts/' + msg['dst']['MAC'] + '/None', auth=self.__rest_auth, headers=self.__rest_hdr)
                         rsp = loads(rsp.text)
                         self.__locations[msg['dst']['IP']] = rsp['locations'][0]
-                    msg['dst']['location'] = self.__locations[msg['dst']['IP']]
+                    msg['dst']['location'] = self.__locations[msg['dst']['IP']]     # Fetch the destination's location from the cache
                     if self.__config is not None:
-                        for k in self.__config['IP'].keys():
+                        for k in self.__config['IP'].keys():                        # Fetch the destination's name based upon the configuration, if any
                             if msg['dst']['IP'] == self.__config['IP'][k]:
                                 msg['dst']['name'] = k
                                 break
@@ -226,14 +226,14 @@ class IDSPrompt(Cmd):
     def do_flush(self, line):
         '''Flush all received messages'''
         sz = self.__backend.size()
-        while sz > 0:
+        while sz > 0:                       # Empty the message queue 
             self.do_next(None)
             sz -= 1
     
     def do_size(self, line):
         '''Get the current size of the message buffer'''
         if self.__backend is not None:
-            print(self.__backend.size())
+            print(self.__backend.size())    # Display the current queue size
         else:
             print('No message queue')
 
@@ -241,13 +241,13 @@ class IDSPrompt(Cmd):
     
     def do_start(self, arg):
         '''Start the network sniffer'''
-        if self.__backend is not None and self.__backend.is_alive():
+        if self.__backend is not None and self.__backend.is_alive():    # The sniffer is up and running, no need to start it again
             print('Sniffer is already running.')
         else:
-            try:
+            try:                                                        # Attempt to start a new instance of a sniffer class
                 if self.__backend is not None:
                     self.__backend = None
-                self.__backend = ICSSniffer(self.__iface)
+                self.__backend = ICSSniffer(self.__iface)               # Initialize the sniffer with the interface
                 self.__backend.start()
             except RuntimeError:
                 pass
@@ -255,8 +255,8 @@ class IDSPrompt(Cmd):
     def do_stop(self, arg):
         '''Stop the sniffer'''
         if self.__backend is not None and self.__backend.is_alive():
-            self.__backend.set_stop()
-            while True:
+            self.__backend.set_stop()                                   # Set the interrupt variable in the sniffer
+            while True:                                                 # Wait while the sniffer finishes its execution
                 self.__backend.join(2)
                 if self.__backend.is_alive():
                     print('Sniffer is still running ...')
@@ -271,7 +271,7 @@ class IDSPrompt(Cmd):
             self.do_stop(arg)
         return True
 
-    def do_EOF(self, arg):
+    def do_EOF(self, arg):                                              # Ctrl + D (EOF)
         stdout.write('\r\n')
         if self.__backend is not None and self.__backend.is_alive():
             self.do_stop(arg)
@@ -284,6 +284,11 @@ class IDSPrompt(Cmd):
         stdout.write('\x00')
 
 def main():
+    '''Testbed execution.
+    
+    A single instance of the IDSPrompt is started in order to interact with the user.
+    
+    By default, it uses the 'vboxnet1' interface as a sniffing device.'''
     prompt = IDSPrompt('vboxnet1')
     try:
         prompt.cmdloop()
