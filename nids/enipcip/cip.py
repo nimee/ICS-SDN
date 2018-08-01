@@ -160,7 +160,7 @@ class CIP_PathField(scapy_all.StrLenField):
         if int(val[0]) == 0x91:
             # "ANSI Extended Symbolic", the path is a string
             # Don't check the second byte, which is the length (in bytes) of the strings.
-            return {-1: val[2:].rstrip("\0")}
+            return {-1: bytes(val[2:]).decode('ascii').rstrip("\0").encode('ascii')}
 
         pos = 0
         result = []
