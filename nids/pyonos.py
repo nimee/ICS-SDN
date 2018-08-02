@@ -144,6 +144,103 @@ class ONOSClient():
         else:
             raise TypeError('devId must be a string representing a valid infrastructure device ID.')
 
+    # FLOWS: Query and program flow rules
+    def flows(self) -> list:
+        '''
+        Request a list with all the flow rules in the system.
+        '''
+        response = self.__get('/flows')
+        if 'flows' in response.keys():
+            return response['flows']
+        return None
+    
+    def appFlows(self, appId: str) -> list:
+        '''
+        Request a list with all the flow rules specified by the given application.
+        '''
+        if appId is None or type(appId) is not str or re.search(r'\s', appId) is not None:
+            raise TypeError('appId must be a valid application id.')
+        response = self.__get('/flows/application/{0:s}'.format(appId))
+        if 'flows' in response.keys():
+            return response['flows']
+        return None
+
+    def deviceFlows(self, devId: str) -> list:
+        '''
+        Request a list of all the flow rules for the specified device.
+        '''
+        if ONOSClient.OFDEV_REGEX.match(devId) is not None:
+            response = self.__get('/flows/{0:s}'.format(devId.lower()))
+            if 'flows' in response.keys():
+                return response['flows']
+            return None
+        else:
+            raise TypeError('devId must be a string representing a valid infrastructure device ID.')
+
+    def flowRule(self, devId: str, flowId: int) -> dict:
+        '''
+        Request the details of a particular flow rule in a specified device.
+        '''
+        if ONOSClient.OFDEV_REGEX.match(devId) is None:
+            raise TypeError('devId must be a string representing a valid infrastructure device ID.')
+        if flowId is None or type(flowId) is not int:
+            raise TypeError('flowId must be an integer representing a valid flow rule ID.')
+        response = self.__get('/flows/{0:s}/{1:d}'.format(devId.lower(), flowId))
+        if 'flows' in response.keys():
+            response = response['flows']
+            if len(response) > 0:
+                return response[0]
+        return None
+
+    def pendingFlows(self) -> list:
+        '''
+        Request a list of all the pending flow rules in the system.
+        '''
+        response = self.__get('/flows/pending')
+        if 'flows' in response.keys():
+            return response['flows']
+        return None
+
+    def addFlows(self, appId: str, flows: dict) -> dict:
+        '''
+        Create the specified flow rules.
+        '''
+        if appId is None or type(appId) is not str or re.search(r'\s', appId) is not None:
+            raise TypeError('appId must be a valid application id.')
+        if flows is None or type(flows) is not dict:
+            raise TypeError('flows must be a dictionary containing the data structure of the new flow rules.')
+        return self.__post('/flows?=appId={0:s}'.format(appId.lower()), flows)
+
+    def addFlow(self, devId: str, appId: str, flow: dict) -> dict:
+        '''
+        Create the given flow rule in the specified device.
+        '''
+        if ONOSClient.OFDEV_REGEX.match(devId) is None:
+            raise TypeError('devId must be a string representing a valid infrastructure device ID.')
+        if appId is None or type(appId) is not str or re.search(r'\s', appId) is not None:
+            raise TypeError('appId must be a valid application id.')
+        if flow is None or type(flow) is not dict:
+            raise TypeError('flow must be a dictionary containing the data structure of the new flow rule.')
+        return self.__post('/flows/{0:s}?appId={1:s}'.format(devId.lower(), appId.lower()), flow)
+
+    def delFlow(self, devId: str, flowId: int) -> dict:
+        '''
+        Delete the specified flow rule from the given device
+        '''
+        if ONOSClient.OFDEV_REGEX.match(devId) is None:
+            raise TypeError('devId must be a string representing a valid infrastructure device ID.')
+        if flowId is None or type(flowId) is not int:
+            raise TypeError('flowId must be an integer representing a valid flow rule ID.')
+        return self.__delete('/flows/{0:s}/{1:d}'.format(devId.lower(), flowId), None)
+
+    def delAppFlows(self, appId: str) -> dict:
+        '''
+        Delete all the flow rules associated with the given application
+        '''
+        if appId is None or type(appId) is not str or re.search(r'\s', appId) is not None:
+            raise TypeError('appId must be a valid application id.')
+        return self.__delete('/flows/application/{0:s}'.format(appId.lower()), None)
+
     # GROUPS: Query and program group rules
     def groups(self) -> list:
         '''
