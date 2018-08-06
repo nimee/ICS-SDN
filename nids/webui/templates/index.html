@@ -1,26 +1,38 @@
 <html>
     <head>
         <title>SDN IDS web UI</title>
+        <link rel="stylesheet" href="static/css/bootstrap.min.css" integrity="sha384-MCw98/SFnGE8fJT3GXwEOngsV7Zt27NXFoaoApmYm81iuXoPkFOJwJ8ERdknLPMO">
         <script type="text/javascript" src="static/js/webui.js"></script>
-        <style>
-            table, th, td {
-                border: 1px solid black;
-                border-collapse: collapse;
-            }
-            th, td {
-                padding: 5px;
-            }
-        </style>
     </head>
-    <body onload="refreshAll(); setAutoRefresh(10000);">
-    <div>
-        <div id="localtime"></div>
-        <div><button onclick="stopAutoRefresh();">Stop auto-refresh</button></div>
-    </div>
-    <div>
-        <table id="devices">
-        </table>
-        <button onclick="refreshDevices();" type="button">Refresh</button>
-    </div>
+    <body onload="refreshAll(); setAutoRefresh(10000);" style="background-color: #008542;">
+        <div class="container-fluid">
+            <nav class="navbar fixed-top bg-light">
+                <a class="navbar-brand mr-auto" href="#">
+                    <img src="static/img/header_ecs_orange_lo.png" height="40" hspace="5" alt="">
+                </a>
+                <div class="nav-itm mr-auto">SDN IDS web ui</div>
+                <button id="btn-timer" class="btn btn-sm btn-outline-success"></button>
+                <div class="nav-item ml-2" id="localtime"></div>
+            </nav>
+            <div class="my-5 py-1"></div>
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h4 class="card-title">Devices</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover table-sm" id="devices"></table>
+                    <a class="card-link" onclick="refreshDevices();" href="#">Refresh</a>
+                </div>
+            </div>
+            <div class="card mb-3">
+                <div class="card-header">
+                    <h4 class="card-title">Hosts</h4>
+                </div>
+                <div class="card-body">
+                    <table class="table table-hover table-sm" id="hosts"></table>
+                    <a class="card-link" onclick="refreshHosts();" href="#">Refresh</a>
+                </div>
+            </div>
+        </div>
     </body>
 </html>
