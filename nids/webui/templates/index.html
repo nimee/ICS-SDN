@@ -1,0 +1,26 @@
+<html>
+    <head>
+        <title>SDN IDS web UI</title>
+        <script type="text/javascript" src="static/js/webui.js"></script>
+        <style>
+            table, th, td {
+                border: 1px solid black;
+                border-collapse: collapse;
+            }
+            th, td {
+                padding: 5px;
+            }
+        </style>
+    </head>
+    <body onload="refreshAll(); setAutoRefresh(10000);">
+    <div>
+        <div id="localtime"></div>
+        <div><button onclick="stopAutoRefresh();">Stop auto-refresh</button></div>
+    </div>
+    <div>
+        <table id="devices">
+        </table>
+        <button onclick="refreshDevices();" type="button">Refresh</button>
+    </div>
+    </body>
+</html>

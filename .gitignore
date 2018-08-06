@@ -2,7 +2,6 @@
 __pycache__/
 *.py[cod]
 *$py.class
-nids/enipcip/__pycache__/cip.cpython-35.pyc
-nids/enipcip/__pycache__/__init__.cpython-35.pyc
-nids/enipcip/__pycache__/enip_tcp.cpython-35.pyc
-nids/enipcip/__pycache__/utils.cpython-35.pyc
+nids/enipcip/__pycache__/
+nids/webui/logs/
+nids/webui/sessions/
