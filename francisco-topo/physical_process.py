@@ -1,4 +1,5 @@
 from minicps.devices import Tank
+from minicps.devices import PLC
 from scipy.integrate import odeint
 from utils import *
 import numpy as np
@@ -13,9 +14,9 @@ Q102 = ('Q102', 1)
 LIT101 = ('LIT101', 1)
 LIT102 = ('LIT102', 1)
 LIT103 = ('LIT103', 1)
+PLC_ADDR = IP['plc101']
 
-
-class RawWaterTank(Tank):
+class RawWaterTank(PLC):
 
 	def plant_model(self, l, t, q):
   		MQ1, MQ2 = q
@@ -47,22 +48,21 @@ class RawWaterTank(Tank):
 		self.set(Q102, self.Q2)
 
 		# These vectors are used by the model
-		self.q = [self.Q1, self.Q2]
 		self.l = [self.Y1, self.Y2, self.Y3]
-
 		self.abserr = 1.0e-8
 		self.relerr = 1.0e-6
+		self.lock = 0.0
 
 	def main_loop(self):
 		count = 0
-		logging.debug('starting simulation')
+		#logging.debug('starting simulation')
 		#logging.debug('Initial values: L1: ', self.l[0], ' L2: ', self.l[1], ' L3: ', self.l[2])
 		stoptime = 1
 		numpoints = 100
 		t = [stoptime * float(i) / (numpoints - 1) for i in range(numpoints)]
 
 		while(count <= PP_SAMPLES):
-			print "Result at time", count, " ", self.l
+			print count, " ", self.l
 			self.Q1 = float(self.get(Q101))
 			self.Q2 = float(self.get(Q102))
 			self.q = [self.Q1, self.Q2]
@@ -86,14 +86,8 @@ class RawWaterTank(Tank):
 			self.set(LIT102, self.l[1])
 			self.set(LIT103, self.l[2])
 			count += 1
+			#self.lock = float(self.receive(LIT101, PLC_ADDR))
 			time.sleep(PLC_PERIOD_SEC)
 
 if __name__ == '__main__':
-	rwt = RawWaterTank(
-		name='rwt',
-		state=STATE,
-		protocol=None,
-		section=TANK_SECTION,
-		level=RWT_INIT_LEVEL
-	)
-
+	plc101 = RawWaterTank(name='plant101',state=STATE,protocol=TANK_PROTOCOL,memory=GENERIC_DATA,disk=GENERIC_DATA)
