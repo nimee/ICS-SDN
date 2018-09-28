@@ -1,13 +1,15 @@
 #!/usr/bin/env python3
 
 from scapy.all import sniff, Packet
+from scapy.layers.inet import icmptypes
+from scapy.data import IP_PROTOS
 import enipcip.cip
 from struct import unpack
 from binascii import hexlify
 from os import geteuid
 from threading import Thread
 from time import sleep
-from collections import deque
+from collections import deque, OrderedDict
 from sys import stdout
 from cmd import Cmd
 from json import load, loads
@@ -19,6 +21,10 @@ CONTROLLER_PORT = 6633
 REST_PORT = 8181
 REST_USER = 'onos'
 REST_PASS = 'rocks'
+LOCAL_PROTOS = {}
+
+for k in IP_PROTOS.keys():
+    LOCAL_PROTOS[IP_PROTOS[k]] = str(k).upper()
 
 class ICSSniffer(Thread):
     '''This class executes as a separate thread and is intended to read up to 65536 Ethernet/IP messages.
@@ -67,6 +73,7 @@ class ICSSniffer(Thread):
         self.__should_stop = False                              # Interrupt variable
         self.__iface = interface                                # The network interface in which the sniffer will be started
         self.__messages = deque(iterable=[], maxlen=65536)      # Message queue
+        self.__packet_stats = {}                                # IP traffic statistics
 
     @staticmethod
     def read_cip_tag(tagtype: int, tagdata: bytes) -> dict:
@@ -131,7 +138,8 @@ class ICSSniffer(Thread):
 
     def __handle_pkt(self, packet: Packet) -> str:
         '''Callback method to be executed by Scapy for every sniffed packet.'''
-        if packet.haslayer('ENIP_SendRRData') and packet['ENIP_SendRRData'].items[1]['CIP'].direction == 1:
+        stat_key = None
+        if packet.haslayer('ENIP_SendRRData') and packet['ENIP_SendRRData'].items[1]['CIP'].direction == 1: # Response
             message = {}
             message['src'] = {}
             message['dst'] = {}
@@ -142,12 +150,67 @@ class ICSSniffer(Thread):
             message['rawdata'] = bytes(packet['ENIP_SendRRData'].items[1]['Raw'])
             message['data'] = self.read_cip_tag(message['rawdata'][0], message['rawdata'][2:])
             message['rawdata'] = hexlify(message['rawdata']).decode('utf-8')
+            if packet.haslayer('TCP'):
+                stat_key = '{0:s}:{1:d}/{2:s}:{3:d}/TCP'.format(
+                    packet['IP'].src,
+                    packet['TCP'].sport,
+                    packet['IP'].dst,
+                    packet['TCP'].dport
+                )
+            elif packet.haslayer('UDP'):
+                stat_key = '{0:s}:{1:d}/{2:s}:{3:d}/UDP'.format(
+                    packet['IP'].src,
+                    packet['UDP'].sport,
+                    packet['IP'].dst,
+                    packet['UDP'].dport
+                )
             self.__messages.append(message)
+        elif packet.haslayer('IP'):
+            message = {}
+            message['src'] = {}
+            message['dst'] = {}
+            message['src']['MAC'] = str.upper(packet['Ethernet'].src)
+            message['dst']['MAC'] = str.upper(packet['Ethernet'].dst)
+            message['src']['IP'] = packet['IP'].src
+            message['dst']['IP'] = packet['IP'].dst
+            message['rawippayload'] = packet['IP'].payload
+            if packet.haslayer('TCP'):
+                stat_key = '{0:s}:{1:d}/{2:s}:{3:d}/TCP'.format(
+                    packet['IP'].src,
+                    packet['TCP'].sport,
+                    packet['IP'].dst,
+                    packet['TCP'].dport
+                )
+            elif packet.haslayer('UDP'):
+                stat_key = '{0:s}:{1:d}/{2:s}:{3:d}/UDP'.format(
+                    packet['IP'].src,
+                    packet['UDP'].sport,
+                    packet['IP'].dst,
+                    packet['UDP'].dport
+                )
+            else:
+                stat_key = '{0:s}/{1:s}/{2:s}'.format(
+                    packet['IP'].src,
+                    packet['IP'].dst,
+                    LOCAL_PROTOS[packet['IP'].proto]
+                )
+            self.__messages.append(message)
+        if stat_key is not None:
+            if stat_key in self.__packet_stats.keys():
+                self.__packet_stats[stat_key] += 1
+            else:
+                self.__packet_stats[stat_key] = 1
         return None
 
     def __stop_is_set(self):
         '''Stop filter method to be used by Scapy to determine when to stop sniffing.'''
         return self.__should_stop
+
+    def get_stats(self) -> OrderedDict:
+        pkts = self.__packet_stats.items()
+        self.__packet_stats = {}
+        stats = OrderedDict(sorted(pkts, key=lambda x: x[1], reverse=True))
+        return stats
 
     def set_stop(self):
         '''Set the interrupt variable'''
